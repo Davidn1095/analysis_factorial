@@ -1,0 +1,77 @@
+# Load data from a text file and attach it for direct access
+datos <- read.table("factorial.txt", header = TRUE, row.names = 1) 
+attach(datos)
+
+# Load mvnormtest library and perform multivariate Shapiro-Wilk normality test
+library(mvnormtest)
+mshapiro.test(t(datos))
+
+# Calculate Pearson correlation matrix and display it symbolically
+Redatos <- cor(datos, method = c("pearson")) 
+symnum(Redatos)
+
+# Calculate determinant of the correlation matrix
+det(Redatos)
+
+# Load psych library and perform Kaiser-Meyer-Olkin measure and Bartlett's test
+library(psych) 
+KMO(datos)
+cortest.bartlett(datos, n = NULL)
+
+# Perform principal component analysis
+fac <- prcomp(datos, retx = FALSE, center = TRUE, scale. = TRUE) 
+summary(fac)
+plot(fac)
+
+# Create a matrix for factor loadings and apply varimax rotation
+cargas <- matrix(0, 16, 4) 
+for (i in 1:4) cargas[, i] <- fac$rotation[, i] * fac$sdev[i] 
+cargas2 <- varimax(cargas, normalize = TRUE)$loadings 
+print(cargas2, cutoff = 0.3)
+
+# Calculate communalities for each variable
+comunalidad <- matrix(0, 16, 2) 
+for (i in 1:16) {
+  for (j in 1:4) {
+    comunalidad[i, 1] = comunalidad[i, 1] + cargas[i, j]^2 
+    comunalidad[i, 2] = 1 - comunalidad[i, 1]
+  }
+} 
+comunalidad
+
+# Calculate squared loadings and adjusted loadings
+cargas3 <- matrix(0, 16, 4) 
+cargas4 <- matrix(0, 16, 4) 
+for (i in 1:16) {
+  cargas3[i, ] <- cargas2[i, ]^2 
+  cargas4[i, ] <- cargas3[i, ] / comunalidad[i, 1]
+} 
+cargas3
+cargas4
+
+# Calculate residuals of the fit
+ajuste <- cor(datos) - cargas2 %*% t(cargas2) 
+ajuste
+
+# Create a biplot of the PCA results
+biplot(fac)
+
+# Plot and label factor loadings
+for (i in 1:3) {
+  plot(cargas2[, i], cargas2[, i + 1]) 
+  text(cargas2[, i], cargas2[, i + 1], labels = row.names(datos))
+}
+
+# Set up plotting area and create scatter plots of PCA scores
+par(mfrow = c(3, 2)) 
+for (i in 1:3) {
+  for (j in 1:4) {
+    plot(fac$x[, i], fac$x[, j]) 
+    text(fac$x[, i], fac$x[, j], labels = row.names(fac$x))
+  }
+}
+
+# Prepare for factor analysis and perform it with different numbers of factors
+facmle <- vector("list", 4) 
+for (i in 1:4) {facmle <- factanal(datos, i)} 
+facmle
